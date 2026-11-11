@@ -193,10 +193,10 @@ await test("athkar: evening after Asr, counting, progress kept for the day, star
   await page.click("#resetAthkar");
   eq(await page.textContent("#progressText"), "0 of 24 done", "start again resets");
   await page.click('.chips a[href="#athkar/morning"]');
-  await page.waitForFunction(() => document.querySelectorAll(".dhikr").length === 26);
+  await page.waitForFunction(() => document.querySelector(".chips [aria-current]")?.textContent === "Morning" && document.querySelectorAll(".dhikr").length === 26);
   ok((await page.textContent(".dhikr")).length > 10, "morning athkar shown");
   await page.click('.chips a[href="#athkar/sleep"]');
-  await page.waitForFunction(() => location.hash === "#athkar/sleep" && document.querySelector(".dhikr .ref"));
+  await page.waitForFunction(() => document.querySelector(".chips [aria-current]")?.textContent === "Before sleep" && document.querySelector(".dhikr .ref"));
   eq(await page.$$eval(".dhikr .counter", c => c.length), 0, "before-sleep athkar are for reading, without counters");
   eq(errors, [], "page errors");
   await ctx.close();
