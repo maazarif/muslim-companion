@@ -3,12 +3,8 @@
 // checks against published timetables for eight cities and methods.
 import { PrayerTimes, Coordinates, CalculationMethod, Madhab, HighLatitudeRule, Qibla } from "./vendor/adhan-4.4.6.min.js";
 
-const $ = id => document.getElementById(id);
-const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const store = {
-  get(k, d) { try { const v = localStorage.getItem("companion:" + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem("companion:" + k, JSON.stringify(v)); } catch (e) {} }
-};
+import { $, esc, store, openSheet, closeSheet } from "./util.js";
+import { viewAthkar, viewDuas, viewHadith } from "./content.js";
 
 // ---------- settings ----------
 const ADJ_KEYS = ["fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"];
@@ -112,16 +108,30 @@ function upcoming(now) {
 }
 
 // ---------- views ----------
-const VIEWS = { prayer: viewPrayer, qibla: viewQibla, athkar: () => soon("athkar"), duas: () => soon("duas"), hadith: () => soon("hadith") };
+const VIEWS = {
+  prayer: viewPrayer, qibla: viewQibla,
+  athkar: args => { leaving = viewAthkar(args, athkarDefault()); },
+  duas: args => { leaving = viewDuas(args); },
+  hadith: args => { leaving = viewHadith(args); }
+};
+// Morning athkar from Fajr until Asr, evening from Asr until the next Fajr.
+function athkarDefault() {
+  const now = new Date();
+  if (!S.loc) return now.getHours() >= 15 || now.getHours() < 4 ? "evening" : "morning";
+  const t = timesFor(startOfDay(now));
+  return now >= t.asr || now < t.fajr ? "evening" : "morning";
+}
 let leaving = null; // cleanup for the current view (timers, sensors)
 function route() {
-  const name = (location.hash.slice(1) || "prayer").split("/")[0];
+  const [name, ...args] = decodeURIComponent(location.hash.slice(1) || "prayer").split("/");
   const view = VIEWS[name] ? name : "prayer";
   document.querySelectorAll(".tabs a").forEach(a => { if (a.dataset.tab === view) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
   if (leaving) { leaving(); leaving = null; }
   $("view").innerHTML = "";
-  VIEWS[view]();
+  VIEWS[view](args);
+  if (location.hash !== lastHash) { window.scrollTo(0, 0); lastHash = location.hash; }
 }
+let lastHash = null;
 
 const ICON = {
   pin: '<svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>',
@@ -311,24 +321,7 @@ function viewQibla() {
   leaving = stop;
 }
 
-// ---------- coming next ----------
-const SOON = {
-  athkar: { ar: "الأذكار", title: "Morning and evening athkar", body: "Being prepared from Hisn al-Muslim, with every remembrance referenced to its hadith source and a counter for repetitions." },
-  duas: { ar: "الأدعية", title: "Duas", body: "Duas from the Quran and the Sunnah, grouped by occasion, each with its source." },
-  hadith: { ar: "الحديث", title: "Hadith", body: "Collections such as Sahih al-Bukhari and Sahih Muslim, with the grading shown for every hadith." }
-};
-function soon(k) {
-  const s = SOON[k];
-  $("view").innerHTML = `<section class="page state"><div class="ar">${s.ar}</div><h2>${esc(s.title)}</h2><p>${esc(s.body)}</p><span class="eyebrow">Coming next</span></section>`;
-}
-
 // ---------- sheets ----------
-function openSheet(title, html) {
-  $("sheet").innerHTML = `<div class="sheet-inner"><div class="sheet-top"><h3>${esc(title)}</h3><button class="sheet-close" id="closeSheet">Done</button></div>${html}</div>`;
-  $("sheet").hidden = false; $("scrim").hidden = false;
-  $("closeSheet").onclick = closeSheet;
-}
-function closeSheet() { $("sheet").hidden = true; $("scrim").hidden = true; }
 $("scrim").onclick = closeSheet;
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("sheet").hidden) closeSheet(); });
 

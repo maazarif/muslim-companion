@@ -159,13 +159,126 @@ await test("qibla bearings match adhan's reference values", async () => {
   }
 });
 
-await test("tabs: coming-next sections and the Quran link", async () => {
-  const { ctx, page } = await open({ tz: "UTC" });
+// the hadith CDN, served from tests/fixtures/hadith (Bukhari chapter 1) instead of the internet
+const CDN = /^https:\/\/(cdn\.jsdelivr\.net\/gh\/fawazahmed0\/hadith-api@[0-9a-f]{40}|raw\.githubusercontent\.com\/fawazahmed0\/hadith-api\/[0-9a-f]{40})\/editions\//;
+async function serveHadith(ctx, seen = []) {
+  await ctx.route(url => CDN.test(url.href), route => {
+    const u = route.request().url(); seen.push(u);
+    const m = u.match(/editions\/(\w+-\w+)\/sections\/(\d+)\.min\.json$/);
+    const file = m && path.join(root, "tests/fixtures/hadith", `${m[1]}-${m[2]}.min.json`);
+    return file && fs.existsSync(file) ? route.fulfill({ path: file, contentType: "application/json" }) : route.fulfill({ status: 404 });
+  });
+  return seen;
+}
+
+await test("athkar: evening after Asr, counting, progress kept for the day, start again", async () => {
+  const f = fixture("Makkah-UmmAlQura.json");
+  const { ctx, page, errors } = await open({ tz: "Asia/Riyadh", lat: f.params.latitude, lng: f.params.longitude, at: "2016-03-05T16:30:00+03:00" });
+  await page.click("#useGps");
+  await page.waitForSelector("#times li");
   await page.click('.tabs a[data-tab="athkar"]');
-  await page.waitForFunction(() => location.hash === "#athkar" && document.querySelector("#view .state"));
-  ok((await page.textContent("#view")).includes("Hisn al-Muslim"), "athkar placeholder");
-  eq(await page.getAttribute('.tabs a[data-tab="athkar"]', "aria-current"), "page", "athkar tab marked current");
-  eq(await page.getAttribute("#quranLink", "href"), "https://maazarif.github.io/quran-app/", "link to the Mushaf");
+  await page.waitForSelector(".dhikr");
+  eq(await page.textContent(".chips [aria-current]"), "Evening", "after Asr (3:55 PM) the evening athkar open");
+  eq(await page.$$eval(".dhikr", c => c.length), 24, "24 evening athkar");
+  eq(await page.textContent("#progressText"), "0 of 24 done", "progress starts at zero");
+  const card = page.locator(".dhikr").nth(3); // Al-Ikhlas, three times
+  eq(await card.locator(".times").textContent(), "3 times", "repetitions shown");
+  for (const left of ["2", "1"]) { await card.locator(".counter").click(); eq(await card.locator(".counter").textContent(), left, "counter counts down"); }
+  await card.locator(".counter").click();
+  ok(await card.evaluate(c => c.classList.contains("done")), "card marked done after the third tap");
+  eq(await page.textContent("#progressText"), "1 of 24 done", "progress updates");
+  await page.reload();
+  await page.waitForSelector(".dhikr");
+  eq(await page.textContent("#progressText"), "1 of 24 done", "progress survives a reload the same day");
+  await page.click("#resetAthkar");
+  eq(await page.textContent("#progressText"), "0 of 24 done", "start again resets");
+  await page.click('.chips a[href="#athkar/morning"]');
+  await page.waitForFunction(() => document.querySelectorAll(".dhikr").length === 26);
+  ok((await page.textContent(".dhikr")).length > 10, "morning athkar shown");
+  await page.click('.chips a[href="#athkar/sleep"]');
+  await page.waitForFunction(() => location.hash === "#athkar/sleep" && document.querySelector(".dhikr .ref"));
+  eq(await page.$$eval(".dhikr .counter", c => c.length), 0, "before-sleep athkar are for reading, without counters");
+  eq(errors, [], "page errors");
+  await ctx.close();
+});
+
+await test("athkar: morning before Asr", async () => {
+  const f = fixture("Makkah-UmmAlQura.json");
+  const { ctx, page } = await open({ tz: "Asia/Riyadh", lat: f.params.latitude, lng: f.params.longitude, at: "2016-03-05T07:00:00+03:00" });
+  await page.click("#useGps");
+  await page.waitForSelector("#times li");
+  await page.goto(URL0 + "#athkar");
+  await page.waitForSelector(".dhikr");
+  eq(await page.textContent(".chips [aria-current]"), "Morning", "morning athkar open after Fajr");
+  await ctx.close();
+});
+
+await test("duas: categories, search, a chapter with sources, and the 99 Names", async () => {
+  const { ctx, page, errors } = await open({ tz: "UTC" });
+  await page.click('.tabs a[data-tab="duas"]');
+  await page.waitForSelector(".tile");
+  eq(await page.$$eval(".tile", t => t.length), 11, "11 categories");
+  await page.fill("#duaSearch", "travel");
+  await page.waitForSelector("#duaResults .list-row");
+  ok(await page.isHidden("#duaHome"), "categories hide while searching");
+  const first = page.locator("#duaResults .list-row").first();
+  ok(/travel/i.test(await first.textContent()), "a travel chapter comes first");
+  await first.click();
+  await page.waitForSelector(".dhikr .ref");
+  ok(await page.$$eval(".dhikr", cs => cs.length > 0 && cs.every(c => c.querySelector(".ar").textContent.trim() && c.querySelector(".en").textContent.trim() && c.querySelector(".ref").textContent.trim())), "each dua has Arabic, English and its source");
+  await page.click(".back");
+  await page.waitForSelector(".list-row");
+  ok((await page.textContent(".sec-head h1")).length > 2, "back goes to the category");
+  await page.goto(URL0 + "#duas");
+  await page.waitForSelector("#duaSearch");
+  await page.fill("#duaSearch", "zzqx");
+  await page.waitForSelector("#duaResults .state");
+  await page.goto(URL0 + "#duas/names");
+  await page.waitForSelector(".name");
+  eq(await page.$$eval(".name", n => n.length), 99, "99 Names");
+  eq(errors, [], "page errors");
+  await ctx.close();
+});
+
+await test("hadith: forty hadith offline, a Bukhari chapter from the pinned source, gradings", async () => {
+  const { ctx, page, errors } = await open({ tz: "UTC" });
+  const seen = await serveHadith(ctx);
+  await page.click('.tabs a[data-tab="hadith"]');
+  await page.waitForSelector(".daily");
+  ok((await page.textContent(".daily .eyebrow")).startsWith("Hadith of the day"), "hadith of the day");
+  eq(await page.$$eval("#view .list-row", r => r.length), 9, "two forty-hadith books and seven collections");
+  eq(await page.getAttribute("#quranLink", "href"), "https://maazarif.github.io/quran-app/", "header links to the Mushaf");
+  await page.goto(URL0 + "#hadith/nawawi");
+  await page.waitForSelector(".hadith");
+  eq(await page.$$eval(".hadith", h => h.length), 42, "42 Nawawi hadith");
+  await page.click(".hadith details summary");
+  ok(await page.isVisible(".hadith details .ar"), "Arabic opens");
+  await page.goto(URL0 + "#hadith/bukhari");
+  await page.waitForSelector("#secList");
+  eq(await page.$$eval("#secList .list-row", r => r.length), 97, "97 chapters of Bukhari");
+  await page.fill("#secSearch", "revelation");
+  eq(await page.$$eval("#secList .list-row:not([hidden])", r => r.length), 1, "chapter search");
+  await page.click("#secList .list-row:not([hidden])");
+  await page.waitForSelector(".hadith");
+  const want = JSON.parse(fs.readFileSync(path.join(root, "tests/fixtures/hadith/eng-bukhari-1.min.json"))).hadiths.filter(h => h.text.trim()).length;
+  eq(await page.$$eval(".hadith", h => h.length), want, "every hadith of the chapter");
+  eq(await page.textContent(".hadith .grade"), "Sahih · in Sahih al-Bukhari", "Bukhari's grading");
+  ok(seen.every(u => u.includes("df57907be35291c91ad6a6691180e22ca9920784")) && seen.some(u => u.includes("eng-bukhari/sections/1")) && seen.some(u => u.includes("ara-bukhari/sections/1")), "English and Arabic from the pinned commit");
+  ok(await page.isVisible('.pager a[href="#hadith/bukhari/2"]'), "link to the next chapter");
+  eq(errors, [], "page errors");
+  await ctx.close();
+});
+
+await test("hadith: a chapter that can't load says so and can be retried", async () => {
+  const { ctx, page } = await open({ tz: "UTC" });
+  await ctx.route(url => CDN.test(url.href), route => route.abort());
+  await page.goto(URL0 + "#hadith/bukhari/1");
+  await page.waitForSelector("#loadErr");
+  ok((await page.textContent("#loadErr")).includes("Couldn't load"), "error message");
+  await ctx.unrouteAll();
+  await serveHadith(ctx);
+  await page.click("#retry");
+  await page.waitForSelector(".hadith");
   await ctx.close();
 });
 
@@ -176,9 +289,9 @@ await test("phone layout: nothing wider than the screen, in light and dark", asy
     await page.emulateMedia({ colorScheme: scheme });
     await page.click("#useGps");
     await page.waitForSelector("#times li");
-    for (const h of ["#prayer", "#qibla"]) {
+    for (const h of ["#prayer", "#qibla", "#athkar/morning", "#duas", "#duas/ch/27", "#duas/names", "#hadith", "#hadith/nawawi", "#hadith/bukhari"]) {
       await page.goto(URL0 + h);
-      await page.waitForTimeout(100);
+      await page.waitForTimeout(250);
       ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `no sideways scroll on ${h} (${scheme})`);
     }
     await ctx.close();
@@ -201,6 +314,10 @@ await test("works offline after the first visit", async () => {
   ok((await page.textContent("#hero")).length > 10, "next prayer shown offline");
   await page.goto(URL0 + "#qibla");
   await page.waitForSelector("#bearing", { timeout: 5000 });
+  for (const [h, sel] of [["#athkar/morning", ".dhikr .counter"], ["#duas/ch/27", ".dhikr .ref"], ["#duas/names", ".name"], ["#hadith/qudsi", ".hadith"]]) {
+    await page.goto(URL0 + h);
+    await page.waitForSelector(sel, { timeout: 5000 });
+  }
   await ctx.close();
 });
 
