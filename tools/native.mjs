@@ -91,10 +91,16 @@ if (platform === "ios") {
   const xcode = require("xcode");
   const pbx = file("ios/App/App.xcodeproj/project.pbxproj");
   const proj = xcode.project(pbx); proj.parseSync();
-  if (!fs.readFileSync(pbx, "utf8").includes("chime.wav")) {
+  // (the library's addResourceFile() needs a "Resources" group, which Capacitor's project doesn't have)
+  if (!proj.hasFile("chime.wav")) {
     const group = proj.findPBXGroupKey({ path: "App" }) || proj.findPBXGroupKey({ name: "App" });
     if (!group) throw new Error("App group not found in the Xcode project");
-    proj.addResourceFile("chime.wav", {}, group);
+    const f = proj.addFile("chime.wav", group, { lastKnownFileType: "audio.wav" });
+    const ref = proj.pbxFileReferenceSection()[f.fileRef];
+    for (const k of Object.keys(ref)) if (ref[k] === undefined || ref[k] === "undefined") delete ref[k];
+    f.uuid = proj.generateUuid();
+    proj.addToPbxBuildFileSection(f);
+    proj.addToPbxResourcesBuildPhase(f);
   }
   proj.updateBuildProperty("MARKETING_VERSION", VERSION);
   proj.updateBuildProperty("CURRENT_PROJECT_VERSION", BUILD);
