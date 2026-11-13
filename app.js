@@ -5,6 +5,7 @@ import { PrayerTimes, Coordinates, CalculationMethod, Madhab, HighLatitudeRule, 
 
 import { $, esc, store, openSheet, closeSheet } from "./util.js";
 import { viewAthkar, viewDuas, viewHadith } from "./content.js";
+import * as Native from "./native.js";
 
 // ---------- settings ----------
 const ADJ_KEYS = ["fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"];
@@ -17,6 +18,10 @@ const S = {
   theme: store.get("theme", "auto"),
   hijriAdj: store.get("hijriAdj", 0),
   adj: Object.assign(Object.fromEntries(ADJ_KEYS.map(k => [k, 0])), store.get("adj", {})),
+  // phone apps only: a notification at each prayer time
+  notify: store.get("notify", false),
+  notifyFor: Object.assign({ fajr: true, sunrise: false, dhuhr: true, asr: true, maghrib: true, isha: true }, store.get("notifyFor", {})),
+  sound: store.get("sound", "chime"),
   day: 0                                // days from today shown on the Prayer tab
 };
 function save(k) { store.set(k, S[k]); }
@@ -169,7 +174,7 @@ function locate(errEl) {
   }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 600000 });
 }
 const round = x => Math.round(x * 1e4) / 1e4;
-function setLocation(loc) { S.loc = loc; save("loc"); closeSheet(); route(); }
+function setLocation(loc) { S.loc = loc; save("loc"); closeSheet(); route(); syncAthan(); }
 
 function viewPrayer() {
   if (!S.loc) return needLocation("Prayer times are worked out for your exact location.");
@@ -358,7 +363,7 @@ function onSeg(id, fn) {
 
 function settingsSheet() {
   const suggested = S.loc ? methodInfo(suggestMethod(S.loc.lat, S.loc.lng)).name : null;
-  openSheet("Settings", `
+  openSheet("Settings", `${Native.isNative ? notifySection() : ""}
     <label class="field"><span>Calculation method</span>
       <select id="setMethod">
         ${suggested ? `<option value="">Suggested: ${esc(suggested)}</option>` : ""}
@@ -387,9 +392,107 @@ function settingsSheet() {
   onSeg("setHijri", v => { S.hijriAdj = Number(v); save("hijriAdj"); refresh(); });
   onSeg("setFmt", v => { S.fmt = v; save("fmt"); refresh(); });
   onSeg("setTheme", v => { S.theme = v; save("theme"); applyTheme(); });
+  if (Native.isNative) wireNotify();
 }
-// re-draw the page behind the open settings sheet (route() leaves the sheet alone)
-function refresh() { route(); }
+// re-draw the page behind the open settings sheet (route() leaves the sheet alone), and move the notifications
+function refresh() { route(); syncAthan(); }
+
+// ---------- prayer notifications (phone apps) ----------
+// Every notification for the coming days, in time order. Ids are the date and prayer: 2026111204 is Maghrib on 12 Nov 2026.
+function athanEvents(from = new Date()) {
+  if (!S.loc) return [];
+  const on = PRAYERS.filter(p => S.notifyFor[p.k]);
+  if (!on.length) return [];
+  const days = Math.min(Native.MAX_DAYS, Math.floor(Native.LIMIT / on.length));
+  const out = [], first = startOfDay(from);
+  for (let i = 0; i < days + 1; i++) {
+    const day = addDays(first, i), t = timesFor(day);
+    for (const p of on) {
+      const at = t[p.k];
+      if (!at || at <= from) continue;
+      const l = label(p, day), idx = PRAYERS.indexOf(p);
+      const id = Number(`${day.getFullYear()}${String(day.getMonth() + 1).padStart(2, "0")}${String(day.getDate()).padStart(2, "0")}`) * 10 + idx;
+      out.push({ id: id % 2147483647, at, prayer: p.k, title: `${l.en} · ${l.ar}`,
+        body: p.k === "sunrise" ? `Sunrise at ${fmtTime(at)}. The time for Fajr has ended.`
+          : `It's time for ${l.en}, ${fmtTime(at)} in ${S.loc.label || "your location"}.` });
+    }
+  }
+  return out.slice(0, Native.LIMIT);
+}
+
+let syncTimer = null, lastSync = null;
+// Re-schedules the notifications shortly after any change (debounced), and whenever the app is opened.
+function syncAthan() {
+  if (!Native.isNative) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(async () => {
+    try {
+      if (!S.notify || !S.loc) { await Native.cancelAll(); lastSync = { count: 0 }; }
+      else if (await Native.permission() !== "granted") lastSync = { count: 0, blocked: true };
+      else {
+        const events = athanEvents();
+        const count = await Native.schedule(events, S.sound);
+        lastSync = { count, until: count ? events[count - 1].at : null };
+      }
+    } catch (e) { lastSync = { count: 0, error: String(e && e.message || e) }; }
+    if ($("notifyStatus")) notifyStatus();
+  }, 400);
+}
+
+function notifySection() {
+  return `<div class="field"><span>Prayer notifications</span>
+      ${seg("setNotify", [["on", "On"], ["off", "Off"]], S.notify ? "on" : "off")}
+      <div class="seg six" id="setNotifyFor" ${S.notify ? "" : "hidden"}>${PRAYERS.map(p =>
+        `<button data-v="${p.k}" aria-pressed="${!!S.notifyFor[p.k]}">${esc(p.en)}</button>`).join("")}</div>
+      <div id="notifyMore" ${S.notify ? "" : "hidden"}>
+        <div class="field"><span>Sound</span>${seg("setSound", Object.entries(Native.SOUNDS).map(([k, v]) => [k, v.name]), S.sound)}</div>
+        <div class="row" style="justify-content:flex-start;margin-top:8px"><button class="btn" id="testNotify">Send a test in 3 seconds</button></div>
+      </div>
+      <small id="notifyStatus"></small>
+      <div id="exactWarn" hidden><p class="note">Your phone may deliver these a few minutes late.</p>
+        <button class="btn" id="allowExact">Allow on-time alerts</button></div>
+    </div>`;
+}
+
+async function notifyStatus() {
+  const el = $("notifyStatus"); if (!el) return;
+  const perm = await Native.permission();
+  let msg = "";
+  if (perm === "denied") msg = "Notifications are turned off for this app. Turn them on in your phone's Settings, under Notifications.";
+  else if (!S.notify) msg = "A notification at the start of each prayer time, even when the app is closed.";
+  else if (!S.loc) msg = "Set your location first.";
+  else if (lastSync && lastSync.error) msg = "Couldn't schedule notifications: " + lastSync.error;
+  else if (lastSync && lastSync.count) msg = `Scheduled until ${fmtDay(lastSync.until, { weekday: "short", day: "numeric", month: "short" })}. Opening the app tops them up.`;
+  else if (lastSync && !lastSync.count && !lastSync.blocked) msg = "No prayers selected.";
+  el.textContent = msg;
+  const warn = $("exactWarn");
+  if (warn) warn.hidden = !(S.notify && perm === "granted" && await Native.exactAlarms() !== "granted");
+}
+
+function wireNotify() {
+  onSeg("setNotify", async v => {
+    if (v === "on" && await Native.permission() !== "granted" && await Native.requestPermission() !== "granted") {
+      S.notify = false; save("notify");
+      $("setNotify").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === "off")));
+      notifyStatus(); return;
+    }
+    S.notify = v === "on"; save("notify");
+    $("setNotifyFor").hidden = $("notifyMore").hidden = !S.notify;
+    syncAthan(); notifyStatus();
+  });
+  $("setNotifyFor").onclick = e => {
+    const b = e.target.closest("button"); if (!b) return;
+    S.notifyFor[b.dataset.v] = !S.notifyFor[b.dataset.v]; save("notifyFor");
+    b.setAttribute("aria-pressed", String(S.notifyFor[b.dataset.v])); syncAthan();
+  };
+  onSeg("setSound", v => { S.sound = v; save("sound"); syncAthan(); });
+  $("testNotify").onclick = async () => {
+    await Native.test(S.sound, "Maghrib · المغرب", "This is how prayer notifications will look and sound.");
+    $("notifyStatus").textContent = "A test notification will arrive in 3 seconds. You can lock your phone to see it.";
+  };
+  $("allowExact").onclick = () => Native.openExactAlarmSetting();
+  notifyStatus();
+}
 
 function monthSheet(anyDay) {
   const first = new Date(anyDay.getFullYear(), anyDay.getMonth(), 1);
@@ -410,7 +513,7 @@ const STANDALONE = matchMedia("(display-mode: standalone)").matches || navigator
 let installEvt = null;
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; $("installBtn").hidden = false; });
 window.addEventListener("appinstalled", () => { $("installBtn").hidden = true; });
-if (IOS && !STANDALONE) $("installBtn").hidden = false;
+if (IOS && !STANDALONE && !Native.isNative) $("installBtn").hidden = false;
 $("installBtn").onclick = async () => {
   if (installEvt) { installEvt.prompt(); await installEvt.userChoice; installEvt = null; $("installBtn").hidden = true; return; }
   openSheet("Install on your iPhone", `<ol style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px">
@@ -422,7 +525,27 @@ $("installBtn").onclick = async () => {
 function applyTheme() { if (S.theme === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.dataset.theme = S.theme; }
 $("openSettings").onclick = settingsSheet;
 window.addEventListener("hashchange", () => { closeSheet(); route(); });
-document.addEventListener("visibilitychange", () => { if (!document.hidden && (location.hash || "#prayer").startsWith("#prayer")) route(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) return;
+  if ((location.hash || "#prayer").startsWith("#prayer")) route();
+  syncAthan();
+});
 applyTheme();
-route();
-if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
+if (Native.isNative) {
+  document.documentElement.classList.add("native", "native-" + Native.platform);
+  Native.onOpened(() => { if (!location.hash.startsWith("#prayer")) location.hash = "#prayer"; });
+}
+// Automated test builds of the phone apps include a seed.json with a location and settings (see tools/native.mjs).
+async function applySeed() {
+  if (!Native.isNative || store.get("seeded", false)) return;
+  try {
+    const r = await fetch("seed.json"); if (!r.ok) return;
+    const d = await r.json();
+    for (const k of ["loc", "method", "notify", "notifyFor", "sound"]) if (k in d) { S[k] = d[k]; save(k); }
+    store.set("seeded", true);
+    if (d.testIn) await Native.test(S.sound, "Test · اختبار", "A test notification from the automated build.", d.testIn);
+  } catch (e) {}
+}
+applySeed().finally(() => { route(); syncAthan(); });
+// The phone apps carry every file inside them, so they don't need the service worker.
+if (!Native.isNative && "serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});

@@ -1,0 +1,6 @@
+{
+  "loc": { "lat": 47.6062, "lng": -122.3321, "label": "Seattle", "gps": false },
+  "notify": true,
+  "sound": "chime",
+  "testIn": 40
+}

@@ -1,14 +1,24 @@
 {
   "name": "muslim-companion",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
-  "description": "Installable web app with prayer times, qibla, athkar, duas and hadith. Works offline.",
+  "description": "Prayer times, qibla, athkar, duas and hadith. Web app, plus Android and iOS apps with prayer notifications.",
   "type": "module",
   "scripts": {
     "start": "python3 -m http.server 8080",
-    "test": "node tests/times.test.mjs && node tests/content.test.mjs && node tests/app.test.mjs"
+    "test": "node tests/times.test.mjs && node tests/content.test.mjs && node tests/app.test.mjs && node tests/native.test.mjs",
+    "build:web": "node tools/build-www.mjs",
+    "android": "node tools/native.mjs android",
+    "ios": "node tools/native.mjs ios"
   },
   "devDependencies": {
-    "playwright": "1.49.1"
+    "@capacitor/android": "8.5.3",
+    "@capacitor/assets": "3.0.5",
+    "@capacitor/cli": "8.5.3",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/ios": "8.5.3",
+    "@capacitor/local-notifications": "8.2.1",
+    "playwright": "1.49.1",
+    "xcode": "3.0.1"
   }
 }

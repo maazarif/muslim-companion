@@ -1,0 +1,59 @@
+# Builds the iPhone/iPad app with Capacitor on a Mac, runs a test build on the iOS Simulator and saves
+# screenshots to the native-builds-ios branch. Installing on a real iPhone needs Xcode on a Mac (a free
+# Apple ID works for your own phone) or an Apple Developer account for TestFlight: see native/README.md.
+name: iOS app
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: ios
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: macos-15
+    env:
+      VERSION_CODE: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install --no-audit --no-fund
+      - name: Create and update the iOS project
+        run: node tools/native.mjs ios
+      - name: Build for iPhone (device, unsigned) — checks it compiles for real phones
+        working-directory: ios/App
+        run: xcodebuild -project App.xcodeproj -scheme App -sdk iphoneos -configuration Release -derivedDataPath build/device CODE_SIGNING_ALLOWED=NO build | tail -5
+      - name: Build a Simulator copy that starts with a location and notifications on
+        run: |
+          node tools/native.mjs ios --seed tests/fixtures/native-seed.json
+          cd ios/App && xcodebuild -project App.xcodeproj -scheme App -sdk iphonesimulator -configuration Debug -derivedDataPath build/sim CODE_SIGNING_ALLOWED=NO build | tail -5
+      - name: Check the app bundle
+        run: |
+          APP=ios/App/build/sim/Build/Products/Debug-iphonesimulator/App.app
+          mkdir -p out
+          ls "$APP" | tee out/bundle.txt
+          plutil -p "$APP/Info.plist" | grep -E "CFBundleIdentifier|CFBundleDisplayName|CFBundleShortVersionString|CFBundleVersion|NSLocation|NSMotion" | tee out/info.txt
+          test -f "$APP/chime.wav" && test -f "$APP/public/index.html" && test -f "$APP/public/seed.json"
+      - name: Run it on an iPhone simulator and take screenshots
+        run: |
+          APP=ios/App/build/sim/Build/Products/Debug-iphonesimulator/App.app
+          UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k in sorted(d, reverse=True) if 'iOS' in k for x in d[k] if x['name'].startswith('iPhone')))")
+          echo "Simulator $UDID"; xcrun simctl boot "$UDID"; xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" "$APP"
+          xcrun simctl launch "$UDID" io.github.maazarif.companion
+          sleep 25; xcrun simctl io "$UDID" screenshot out/iphone-prayer.png
+          xcrun simctl ui "$UDID" appearance dark; sleep 6; xcrun simctl io "$UDID" screenshot out/iphone-dark.png
+          xcrun simctl spawn "$UDID" log show --last 3m --style compact --predicate 'process == "App" AND (messageType >= 16 OR eventMessage CONTAINS "⚡️")' > out/app-log.txt 2>&1 || true
+          tail -40 out/app-log.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: companion-ios, path: out }
+      - name: Save the screenshots to the native-builds-ios branch
+        if: always()
+        run: |
+          cd out && git init -q -b native-builds-ios && git config user.name "github-actions[bot]" && git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A && git commit -q -m "iOS simulator run ${GITHUB_SHA::7}"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" native-builds-ios

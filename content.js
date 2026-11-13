@@ -2,6 +2,7 @@
 // by tools/build-content.mjs. The six large hadith collections load chapter by chapter from a pinned
 // copy of fawazahmed0/hadith-api and are then kept for offline use by the service worker.
 import { $, esc, store, loadJSON, todayKey } from "./util.js";
+import { isNative } from "./native.js";
 
 const BACK = '<svg viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></svg>';
 const CHECK = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
@@ -147,11 +148,31 @@ export const HADITH_CDN = [
 const BOOK_AR = { bukhari: "صحيح البخاري", muslim: "صحيح مسلم", abudawud: "سنن أبي داود", tirmidhi: "جامع الترمذي", nasai: "سنن النسائي", ibnmajah: "سنن ابن ماجه", malik: "موطأ مالك", nawawi: "الأربعون النووية", qudsi: "الأحاديث القدسية" };
 const SAHIH = { bukhari: "Sahih al-Bukhari", muslim: "Sahih Muslim" };
 
+// In the browser the service worker keeps opened chapters. The phone apps have no service worker, so they keep
+// them here instead (the source is pinned to one commit, so a saved copy never goes out of date).
+async function savedCopy(key) {
+  if (!isNative) return null;
+  try { const v = localStorage.getItem("companion:hadith:" + key); return v ? JSON.parse(v) : null; } catch (e) { return null; }
+}
+function keepCopy(key, data) {
+  if (!isNative) return;
+  try { localStorage.setItem("companion:hadith:" + key, JSON.stringify(data)); }
+  catch (e) { // storage full: forget the older chapters and try once more
+    try { Object.keys(localStorage).filter(k => k.startsWith("companion:hadith:")).forEach(k => localStorage.removeItem(k));
+      localStorage.setItem("companion:hadith:" + key, JSON.stringify(data)); } catch (e2) {}
+  }
+}
 async function fetchSection(lang, book, n) {
+  const key = `${lang}-${book}-${n}`;
+  const saved = await savedCopy(key);
+  if (saved) return saved;
   let err;
   for (const base of HADITH_CDN) {
-    try { const r = await fetch(`${base}${lang}-${book}/sections/${n}.min.json`); if (r.ok) return await r.json(); err = new Error("HTTP " + r.status); }
-    catch (e) { err = e; }
+    try {
+      const r = await fetch(`${base}${lang}-${book}/sections/${n}.min.json`);
+      if (r.ok) { const data = await r.json(); keepCopy(key, data); return data; }
+      err = new Error("HTTP " + r.status);
+    } catch (e) { err = e; }
   }
   throw err;
 }

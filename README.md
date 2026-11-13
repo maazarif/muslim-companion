@@ -1,6 +1,6 @@
 # Muslim Companion
 
-An installable web app for daily worship: prayer times, qibla, athkar, duas and hadith. It is the companion to the [Mushaf Reader](https://github.com/maazarif/quran-app) and shares its look, fonts and approach: a plain folder of files, no build step, works offline, checked by tests.
+An installable web app for daily worship: prayer times, qibla, athkar, duas and hadith. Also packaged as Android and iPhone apps that add prayer notifications: see [native/README.md](native/README.md). It is the companion to the [Mushaf Reader](https://github.com/maazarif/quran-app) and shares its look, fonts and approach: a plain folder of files, no build step, works offline, checked by tests.
 
 ## What it does
 
@@ -37,7 +37,7 @@ An installable web app for daily worship: prayer times, qibla, athkar, duas and 
 
 ## Known gaps
 
-- **No athan alert while the app is closed.** Web apps can't schedule notifications on iPhone, and only unreliably elsewhere. The plan is a thin Capacitor wrapper later, which adds real scheduled athan notifications without rewriting the app.
+- **Prayer notifications while the app is closed need the Android or iPhone app** ([native/README.md](native/README.md)). Web apps can't schedule them on iPhone, and only unreliably elsewhere.
 - Times are shown in the phone's own time zone. If you type in a location in another time zone, the times will be shifted.
 - There is no city search yet. Use GPS or enter coordinates (press and hold a place in your maps app to copy them).
 - The six large hadith collections need a connection the first time each chapter is opened.
@@ -85,6 +85,9 @@ As with the Quran text in the Mushaf Reader, no religious text is typed by hand:
 | `util.js` | Shared helpers |
 | `data/` | Athkar, duas, names and hadith, with `SOURCES.md` |
 | `tools/build-content.mjs` | Rebuilds `data/` from the original sources |
+| `native.js` | Prayer notifications in the phone apps (does nothing in a browser) |
+| `capacitor.config.json`, `tools/native.mjs`, `native/`, `assets/` | The Android and iPhone apps |
+| `tools/build-www.mjs` | Collects the app's files into `www/` for GitHub Pages and the phone apps |
 | `vendor/` | adhan-js, bundled |
 | `sw.js` | Service worker: installs the whole app for offline use |
 | `manifest.webmanifest`, `icons/` | Home-screen install |

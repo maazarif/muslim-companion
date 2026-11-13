@@ -1,0 +1,23 @@
+{
+  "appId": "io.github.maazarif.companion",
+  "appName": "Companion",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  },
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": true
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "native",
+      "initialViewportFitValueHint": "cover"
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_prayer",
+      "iconColor": "#1f5a4b",
+      "presentationOptions": ["sound", "banner", "list"]
+    }
+  }
+}

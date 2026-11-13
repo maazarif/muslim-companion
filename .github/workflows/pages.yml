@@ -4,6 +4,7 @@ name: Test and publish
 on:
   push:
     branches: [main]
+    paths-ignore: ["native/**", ".github/workflows/android.yml", ".github/workflows/ios.yml"]
   workflow_dispatch:
 permissions:
   contents: write
@@ -18,7 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
+      - run: npm install --no-audit --no-fund
       - run: npx playwright install --with-deps chromium
       - run: npm test
   publish:
@@ -27,11 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Collect site files
-        run: |
-          mkdir _site
-          cp -r index.html styles.css app.js util.js content.js sw.js manifest.webmanifest icons fonts vendor data _site/
-          rm -f _site/data/SOURCES.md
-          touch _site/.nojekyll
+        run: node tools/build-www.mjs && mv www _site
       - name: Publish to gh-pages
         run: |
           cd _site
