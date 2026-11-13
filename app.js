@@ -85,11 +85,21 @@ function fmtTime(d) {
   return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit", hour12: S.fmt === "12" }).format(d).replace(/ /g, " ");
 }
 function fmtDay(d, opts) { return new Intl.DateTimeFormat(undefined, opts).format(d); }
+// The month names are ours: Android's WebView carries trimmed calendar data and names Hijri months in
+// English as if they were Gregorian ("June 3, 1448 BC"). Only the day, month and year numbers come from Intl.
+const HIJRI_EN = ["Muharram", "Safar", "Rabi' al-Awwal", "Rabi' al-Thani", "Jumada al-Ula", "Jumada al-Akhirah",
+  "Rajab", "Sha'ban", "Ramadan", "Shawwal", "Dhu al-Qa'dah", "Dhu al-Hijjah"];
+const HIJRI_AR = ["محرم", "صفر", "ربيع الأول", "ربيع الآخر", "جمادى الأولى", "جمادى الآخرة", "رجب", "شعبان", "رمضان", "شوال", "ذو القعدة", "ذو الحجة"];
 function hijri(d, lang) {
   const shifted = addDays(d, Number(S.hijriAdj) || 0);
   try {
-    const loc = lang === "ar" ? "ar-SA-u-ca-islamic-umalqura-nu-arab" : "en-u-ca-islamic-umalqura";
-    return new Intl.DateTimeFormat(loc, { day: "numeric", month: "long", year: "numeric" }).format(shifted);
+    const parts = Object.fromEntries(new Intl.DateTimeFormat("en-u-ca-islamic-umalqura-nu-latn", { day: "numeric", month: "numeric", year: "numeric" })
+      .formatToParts(shifted).filter(p => p.type !== "literal").map(p => [p.type, p.value]));
+    const day = Number(parts.day), month = Number(parts.month), year = parseInt(parts.year, 10);
+    if (!(month >= 1 && month <= 12) || !day || !year) return "";
+    if (lang !== "ar") return `${day} ${HIJRI_EN[month - 1]} ${year} AH`;
+    const ar = n => String(n).replace(/\d/g, c => "٠١٢٣٤٥٦٧٨٩"[c]);
+    return `${ar(day)} ${HIJRI_AR[month - 1]} ${ar(year)} هـ`;
   } catch (e) { return ""; }
 }
 function until(ms) {

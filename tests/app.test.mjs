@@ -59,7 +59,8 @@ await test("Makkah: suggests Umm al-Qura and shows the published times", async (
   const r = await rows(page);
   ok(!r.some(x => x.now), "no prayer is current between sunrise and Dhuhr");
   ok(r.find(x => x.k === "dhuhr").next, "Dhuhr row marked next");
-  ok((await page.textContent("#dayHijri")).includes("1437"), "Hijri year shown");
+  eq(await page.textContent("#dayHijri"), "25 Jumada al-Ula 1437 AH", "Hijri date, with our own month names");
+  ok((await page.textContent("#hero .dates .ar")).startsWith("٢٥ جمادى الأولى ١٤٣٧"), "Arabic Hijri date");
   eq(errors, [], "page errors");
   await ctx.close();
 });

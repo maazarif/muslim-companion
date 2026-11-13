@@ -6,7 +6,11 @@ set -uo pipefail
 PKG=io.github.maazarif.companion
 OUT=${1:-out}
 fail=0
-adb shell cmd alarm set-timezone America/Los_Angeles 2>/dev/null || adb shell service call alarm 3 s16 America/Los_Angeles >/dev/null || true
+# the seed's location is Seattle, so use its time zone
+adb root >/dev/null 2>&1; adb wait-for-device
+adb shell setprop persist.sys.timezone America/Los_Angeles
+adb shell 'service call alarm 3 s16 America/Los_Angeles' >/dev/null || true
+echo "Emulator time zone: $(adb shell getprop persist.sys.timezone) — $(adb shell date)"
 adb install -r "$OUT/companion-e2e.apk"
 adb shell pm grant $PKG android.permission.POST_NOTIFICATIONS
 adb shell appops set $PKG SCHEDULE_EXACT_ALARM allow || true
