@@ -22,10 +22,13 @@ grep -E "Alarm\{.*$PKG" "$OUT/alarms-full.txt" > "$OUT/alarms.txt" || true
 n=$(wc -l < "$OUT/alarms.txt")
 echo "Alarms scheduled by the app: $n"
 if [ "$n" -lt 60 ]; then echo "::error::Expected at least 60 prayer alarms, found $n"; fail=1; fi
-# the seed's test notification is due 40 s after the app first opened
-sleep 25
-adb shell dumpsys notification --noredact > "$OUT/notifications-full.txt"
-grep -A40 "pkg=$PKG" "$OUT/notifications-full.txt" | grep -E "pkg=|channel=|android.title|android.text|mSound|sound=" > "$OUT/notifications.txt" || true
+# the seed's test notification is due 40 s after the app first opened: wait for it, up to 90 s
+for i in $(seq 1 45); do
+  adb shell dumpsys notification --noredact > "$OUT/notifications-full.txt"
+  grep -A40 "pkg=$PKG" "$OUT/notifications-full.txt" | grep -E "pkg=|channel=|android.title|android.text|mSound|sound=" > "$OUT/notifications.txt" || true
+  grep -q "android.title=String (Test" "$OUT/notifications.txt" && break
+  sleep 2
+done
 cat "$OUT/notifications.txt"
 if ! grep -q "android.title=String (Test" "$OUT/notifications.txt"; then echo "::error::The test notification did not appear"; fail=1; fi
 adb shell cmd statusbar expand-notifications; sleep 3
