@@ -1,0 +1,4 @@
+    NotificationRecord(0x00844743: pkg=io.github.maazarif.companion user=UserHandle{0} id=1 tag=null importance=5 key=0|io.github.maazarif.companion|1|null|10192: Notification(channel=athan-chime shortcut=null contentView=null vibrate=null sound=null defaults=0x0 flags=0x18 color=0xff1f5a4b vis=PRIVATE))
+      icon=Icon(typ=RESOURCE pkg=io.github.maazarif.companion id=0x7f070062)
+                android.title=String (Test · اختبار)
+                android.text=String (A test notification from the automated build.)
