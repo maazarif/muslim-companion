@@ -1,0 +1,18 @@
+getpwuid_r did not find a match for uid 501
+Timestamp               Ty Process[PID:TID]
+2026-11-14 02:59:22.590 E  App[8207:78e0] [com.apple.extensionkit:default] Failed to resolve host network app id to config: bundleID: com.apple.WebKit.Networking instance ID: Optional([_EXExtensionInstanceIdentifier: 279A3D93-280F-46C6-8F15-4CC3BCC13E36])
+2026-11-14 02:59:24.092 F  App[8207:78c5] [com.apple.WebKit:Process] Networking process (0x113094100) took 1.602718 seconds to launch
+2026-11-14 02:59:24.094 F  App[8207:78c5] [com.apple.WebKit:Process] WebContent process (0x1130f80c0) took 1.255140 seconds to launch
+2026-11-14 02:59:24.134 F  App[8207:78c5] [com.apple.WebKit:Process] GPU process (0x11311c1e0) took 1.163612 seconds to launch
+2026-11-14 02:59:25.677 E  App[8207:78dd] [com.apple.TextInputUI:CandidateGeneration] Result accumulator timeout: 0.250000, exceeded.
+2026-11-14 02:59:26.831 E  App[8207:78c5] [com.apple.WebKit:ResourceLoadStatistics] Failed to request storage access quirks from WebPrivacy.
+2026-11-14 02:59:26.831 E  App[8207:78c5] [com.apple.WebKit:ResourceLoadStatistics] Failed to request storage access user agent string quirks from WebPrivacy.
+2026-11-14 02:59:26.832 E  App[8207:78c5] [com.apple.WebKit:ResourceLoadStatistics] Failed to request query parameters from WebPrivacy.
+2026-11-14 02:59:26.832 E  App[8207:78c5] [com.apple.WebKit:ResourceLoadStatistics] Failed to request known fingerprinting scripts from WebPrivacy: Error Domain=WebPrivacyErrorDomain Code=1001 "List data not found" UserInfo={NSLocalizedDescription=List data not found}
+2026-11-14 02:59:27.172 E  App[8207:791e] [com.apple.WebKit:ResourceLoadStatistics] WebContent[8217] Unable to filter tracking query parameters (missing data)
+2026-11-14 02:59:27.204 E  App[8207:791e] [com.apple.WebKit:ResourceLoadStatistics] WebContent[8217] Unable to hide query parameters from script (missing data)
+2026-11-14 02:59:27.267 E  App[8207:78c5] [com.apple.RemoteTextInput:RTILog] -[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = 00D1CC7E-7C37-4AC1-9D94-006ADD60B562
+2026-11-14 02:59:27.273 E  App[8207:78c5] [com.apple.WebKit:ResourceLoadStatistics] Failed to request allowed query parameters from WebPrivacy.
+2026-11-14 02:59:27.489 E  App[8207:78c5] [com.apple.WebKit:ResourceLoadStatistics] Failed to request restricted opener domains from WebPrivacy
+2026-11-14 02:59:27.533 E  App[8207:78f8] [com.apple.TextInputUI:CandidateGeneration] Result accumulator timeout: 0.250000, exceeded.
+2026-11-14 02:59:28.551 E  App[8207:78f8] [com.apple.TextInputUI:CandidateGeneration] Attempted to update accumulator from source type: 0, after completion has already been called for token:[C5D6158D]. This is an error and will be ignored.
