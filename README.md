@@ -33,6 +33,17 @@ An installable web app for daily worship: prayer times, qibla, athkar, duas and 
 - Sahih al-Bukhari, Sahih Muslim, Abu Dawud, Tirmidhi, Nasa'i, Ibn Majah and the Muwatta, by chapter. A chapter downloads when you open it and then stays available offline.
 - Every grading the source gives is shown with the scholar who gave it (for example "Hasan Sahih · Al-Albani"). Bukhari and Muslim are marked Sahih as part of their collection.
 
+**Giving** (zakat, sadaqah, charity)
+- Zakat calculator: cash, money owed to you, gold by karat, silver, shares, funds, 401(k)/IRA, crypto and business stock, minus debts, with the working line by line. Gold and silver prices update daily; you can always enter your own.
+- Where the schools differ, you choose, and a "Why?" shows the views and their sources: silver or gold nisab, worn jewellery, debts, long-term shares, retirement accounts, lunar or solar year.
+- Your zakat date (Hijri): shows how many days are left, and what you still owe after the gifts you've recorded.
+- Zakat al-fitr for the household and fidyah for missed fasts (US defaults from the Fiqh Council of North America, 2026).
+- A giving log with yearly totals, your own list of charities ("Give" opens their website: no money passes through the app), and export/import for backup.
+- In the phone apps, reminders: a week before and on your zakat date, zakat al-fitr on 27 Ramadan, Friday sadaqah, and each of the last ten nights.
+- Everything you enter stays on the phone.
+
+The qibla is now a button on the Prayer screen, so the Giving tab fits.
+
 **Links to the Mushaf Reader** from the header.
 
 ## Known gaps
@@ -58,6 +69,7 @@ npx playwright install chromium
 npm test
 ```
 
+- `tests/giving.test.mjs` checks the zakat arithmetic (`giving-calc.js`) with hand-worked cases: both nisabs, karats, jewellery, debts, retirement, shares, the solar rate, bad input and missing prices.
 - `tests/content.test.mjs` checks that every file in `data/` is exactly what the build made from the recorded sources (by checksum, so nothing can be edited by hand), and that nothing is missing: 287 duas with sources, 99 Names, every athkar with a count, the morning and evening wording in the right sets, 42 + 40 forty-hadith with Arabic and English.
 - `tests/times.test.mjs` checks the bundled calculation library against the eight published timetables that adhan-js is itself tested against (Makkah, London, Dubai, Doha, Kuwait, Ankara, Tehran, Singapore): 2,772 prayer times, each to the minute.
 - `tests/app.test.mjs` runs the real app in headless Chrome: times on screen against those timetables (including method suggestion, Hanafi Asr and high-latitude settings), next and current prayer, countdown, day and month views, 24-hour format, adjustments, settings surviving a reload, qibla bearings against adhan's reference values, compass guidance; athkar choosing morning or evening by the time, counting, progress kept for the day; duas search, chapters with sources, the 99 Names; hadith from the bundled books and a Bukhari chapter served from a local copy of the pinned source, gradings, and the error and retry when a chapter can't load; phone layout in light and dark on every screen; and reopening offline.
@@ -69,6 +81,8 @@ npm test
 | Prayer time and qibla calculation | [adhan-js](https://github.com/batoulapps/adhan-js) by Batoul Apps, MIT licence. Bundled unmodified from source with esbuild into `vendor/adhan-4.4.6.min.js` (sha256 `eb75b2b2…a478cb`), licence in `vendor/adhan-LICENSE.txt` | 4.4.6, commit e779a32 |
 | Reference timetables for tests | adhan-js `Shared/Times`, copied unchanged to `tests/fixtures/adhan` | same |
 | Athkar, duas, 99 Names, hadith | Seen-Arabic adhkar DB (MIT), muslim-data (Apache 2.0) and fawazahmed0/hadith-api (public domain), built into `data/` by `tools/build-content.mjs`. Full details, commits and checksums in [`data/SOURCES.md`](data/SOURCES.md) | see there |
+| Gold and silver prices | [fawazahmed0/exchange-api](https://github.com/fawazahmed0/exchange-api), free and updated daily (`xau` = 1 troy ounce of gold; `xag` = ounces of silver per ounce of gold), with its Cloudflare mirror as a fallback. It has had missing days and can be cached for a while, so the app shows the price date, flags prices more than a week old, and always lets you type your own. CI checks the live feed on every push | latest |
+| Zakat rules | Each choice in the calculator cites its sources in the app (`RULES` in `giving-calc.js`): Islamic Relief and SeekersGuidance (nisab), the four-madhhab summaries (jewellery, debts), AMJA and the Fiqh Council of North America (shares, retirement), NZF/AAOIFI (solar year), FCNA (zakat al-fitr and fidyah 2026). **These rules haven't yet been reviewed by a scholar: do that before a public release** | — |
 | Hijri date | The browser's built-in Umm al-Qura calendar (`Intl`) | — |
 | Fonts | Figtree and Amiri (SIL Open Font Licence), the same files as the Mushaf Reader | — |
 
@@ -82,6 +96,7 @@ As with the Quran text in the Mushaf Reader, no religious text is typed by hand:
 | `styles.css` | Design shared with the Mushaf Reader, light and dark |
 | `app.js` | Prayer times, qibla compass, settings, location, navigation |
 | `content.js` | Athkar, duas and hadith screens |
+| `giving.js`, `giving-calc.js` | Giving screens; the zakat arithmetic and its sources |
 | `util.js` | Shared helpers |
 | `data/` | Athkar, duas, names and hadith, with `SOURCES.md` |
 | `tools/build-content.mjs` | Rebuilds `data/` from the original sources |

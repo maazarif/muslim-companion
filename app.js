@@ -6,6 +6,7 @@ import { PrayerTimes, Coordinates, CalculationMethod, Madhab, HighLatitudeRule, 
 import { $, esc, store, openSheet, closeSheet } from "./util.js";
 import { viewAthkar, viewDuas, viewHadith } from "./content.js";
 import * as Native from "./native.js";
+import { viewGiving, givingEvents, anyReminders } from "./giving.js";
 
 // ---------- settings ----------
 const ADJ_KEYS = ["fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"];
@@ -90,6 +91,15 @@ function fmtDay(d, opts) { return new Intl.DateTimeFormat(undefined, opts).forma
 const HIJRI_EN = ["Muharram", "Safar", "Rabi' al-Awwal", "Rabi' al-Thani", "Jumada al-Ula", "Jumada al-Akhirah",
   "Rajab", "Sha'ban", "Ramadan", "Shawwal", "Dhu al-Qa'dah", "Dhu al-Hijjah"];
 const HIJRI_AR = ["محرم", "صفر", "ربيع الأول", "ربيع الآخر", "جمادى الأولى", "جمادى الآخرة", "رجب", "شعبان", "رمضان", "شوال", "ذو القعدة", "ذو الحجة"];
+// Today's Hijri day, month (1-12) and year, with the user's ±2 day adjustment.
+function hijriParts(d) {
+  try {
+    const p = Object.fromEntries(new Intl.DateTimeFormat("en-u-ca-islamic-umalqura-nu-latn", { day: "numeric", month: "numeric", year: "numeric" })
+      .formatToParts(addDays(d, Number(S.hijriAdj) || 0)).filter(x => x.type !== "literal").map(x => [x.type, x.value]));
+    const r = { day: Number(p.day), month: Number(p.month), year: parseInt(p.year, 10) };
+    return r.month >= 1 && r.month <= 12 && r.day && r.year ? r : null;
+  } catch (e) { return null; }
+}
 function hijri(d, lang) {
   const shifted = addDays(d, Number(S.hijriAdj) || 0);
   try {
@@ -127,7 +137,16 @@ const VIEWS = {
   prayer: viewPrayer, qibla: viewQibla,
   athkar: args => { leaving = viewAthkar(args, athkarDefault()); },
   duas: args => { leaving = viewDuas(args); },
-  hadith: args => { leaving = viewHadith(args); }
+  hadith: args => { leaving = viewHadith(args); },
+  giving: args => { leaving = viewGiving(args, givingCtx) || null; }
+};
+// What the Giving screens need from here.
+const givingCtx = {
+  get isNative() { return Native.isNative; },
+  HIJRI_EN, hijriParts, fmtDay, startOfDay, addDays,
+  maghrib: d => S.loc ? timesFor(d).maghrib : null,
+  resync: () => syncAthan(),
+  requestNotify: async () => (await Native.permission()) === "granted" || (await Native.requestPermission()) === "granted"
 };
 // Morning athkar from Fajr until Asr, evening from Asr until the next Fajr.
 function athkarDefault() {
@@ -140,7 +159,8 @@ let leaving = null; // cleanup for the current view (timers, sensors)
 function route() {
   const [name, ...args] = decodeURIComponent(location.hash.slice(1) || "prayer").split("/");
   const view = VIEWS[name] ? name : "prayer";
-  document.querySelectorAll(".tabs a").forEach(a => { if (a.dataset.tab === view) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+  const tab = view === "qibla" ? "prayer" : view; // the qibla opens from the Prayer screen
+  document.querySelectorAll(".tabs a").forEach(a => { if (a.dataset.tab === tab) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
   if (leaving) { leaving(); leaving = null; }
   $("view").innerHTML = "";
   VIEWS[view](args);
@@ -209,6 +229,7 @@ function viewPrayer() {
       <button class="pill loc" id="locPill">${ICON.pin}<span>${esc(S.loc.label || "My location")}</span></button>
       <button class="pill" id="methodPill">${ICON.calc}<span>${esc(m.name)}${S.madhab === "Hanafi" ? " · Hanafi Asr" : ""}</span></button>
       <button class="pill" id="monthPill">${ICON.cal}<span>Month</span></button>
+      <a class="pill" id="qiblaPill" href="#qibla">${ICON.compass}<span>Qibla</span></a>
     </div>`;
   $("dayName").textContent = S.day === 0 ? "Today · " + fmtDay(day, { weekday: "long", day: "numeric", month: "short" })
     : S.day === 1 ? "Tomorrow · " + fmtDay(day, { weekday: "long", day: "numeric", month: "short" })
@@ -287,6 +308,7 @@ function viewQibla() {
   const bearing = Qibla(coords());
   const km = distanceKm(S.loc, KAABA);
   $("view").innerHTML = `
+    <a class="back" href="#prayer">${ICON.prev}<span>Prayer times</span></a>
     <section class="page qibla">
       <span class="eyebrow">Qibla · القبلة</span>
       <div class="dial" id="dial">${dialSvg(bearing)}</div>
@@ -409,11 +431,11 @@ function refresh() { route(); syncAthan(); }
 
 // ---------- prayer notifications (phone apps) ----------
 // Every notification for the coming days, in time order. Ids are the date and prayer: 2026111204 is Maghrib on 12 Nov 2026.
-function athanEvents(from = new Date()) {
+function athanEvents(from = new Date(), limit = Native.LIMIT) {
   if (!S.loc) return [];
   const on = PRAYERS.filter(p => S.notifyFor[p.k]);
   if (!on.length) return [];
-  const days = Math.min(Native.MAX_DAYS, Math.floor(Native.LIMIT / on.length));
+  const days = Math.min(Native.MAX_DAYS, Math.floor(limit / on.length));
   const out = [], first = startOfDay(from);
   for (let i = 0; i < days + 1; i++) {
     const day = addDays(first, i), t = timesFor(day);
@@ -427,7 +449,7 @@ function athanEvents(from = new Date()) {
           : `It's time for ${l.en}, ${fmtTime(at)} in ${S.loc.label || "your location"}.` });
     }
   }
-  return out.slice(0, Native.LIMIT);
+  return out.slice(0, limit);
 }
 
 let syncTimer = null, lastSync = null;
@@ -437,12 +459,15 @@ function syncAthan() {
   clearTimeout(syncTimer);
   syncTimer = setTimeout(async () => {
     try {
-      if (!S.notify || !S.loc) { await Native.cancelAll(); lastSync = { count: 0 }; }
+      const prayersOn = S.notify && S.loc;
+      if (!prayersOn && !anyReminders()) { await Native.cancelAll(); lastSync = { count: 0 }; }
       else if (await Native.permission() !== "granted") lastSync = { count: 0, blocked: true };
       else {
-        const events = athanEvents();
-        const count = await Native.schedule(events, S.sound);
-        lastSync = { count, until: count ? events[count - 1].at : null };
+        // Giving reminders are few and come first; prayer notifications fill the rest of the 60.
+        const extra = givingEvents(givingCtx);
+        const prayers = prayersOn ? athanEvents(new Date(), Native.LIMIT - extra.length) : [];
+        await Native.schedule([...extra, ...prayers].sort((a, b) => a.at - b.at), S.sound);
+        lastSync = { count: prayers.length, until: prayers.length ? prayers[prayers.length - 1].at : null };
       }
     } catch (e) { lastSync = { count: 0, error: String(e && e.message || e) }; }
     if ($("notifyStatus")) notifyStatus();

@@ -224,6 +224,47 @@ await test("test builds: a seed file sets the location and turns notifications o
   await ctx.close();
 });
 
+await test("Giving reminders: zakat date, zakat al-fitr, Friday and the last ten nights, alongside the prayers", async () => {
+  // 13 Ramadan 1448 (Umm al-Qura) in Seattle
+  const { ctx, page, errors } = await open({ tz: "America/Los_Angeles", lat: 47.6062, lng: -122.3321, at: "2027-02-20T09:00:00-08:00", platform: "android", permission: "granted" });
+  await page.click("#useGps");
+  await page.waitForSelector("#times li");
+  await page.click("#openSettings");
+  await page.click('#setNotify [data-v="on"]');
+  await settle(page);
+  await page.click("#closeSheet");
+  await page.goto(URL0 + "#giving/reminders");
+  await page.click("#rDate");
+  await page.selectOption("#zdMonth", "9"); await page.selectOption("#zdDay", "15");
+  await page.click("#zdSave");
+  for (const k of ["zakat", "fitr", "friday", "lastTen"]) await page.click(`#r_${k} [data-v="on"]`);
+  await settle(page);
+  let s = await ln(page);
+  const giving = s.pending.filter(n => n.extra.prayer === "giving");
+  const ids = giving.map(n => n.id);
+  ok(ids.includes(1002702222), "zakat date: on 15 Ramadan (22 Feb), the week-before one already past");
+  ok(!ids.includes(1002702151), "no reminder in the past");
+  ok(ids.includes(1002703063), "zakat al-fitr on 27 Ramadan (6 Mar) at noon");
+  ok(ids.includes(1002702264) && ids.includes(1002703054), "Fridays 26 Feb and 5 Mar");
+  const night = giving.find(n => n.id === 1002702275);
+  ok(night && night.body.includes("night 21"), "the first of the last ten nights: 20 Ramadan, 27 Feb, after Maghrib");
+  ok(night && new Date(night.schedule.at).getHours() >= 17, "after Maghrib");
+  eq(giving.length, 12, "at most 12 Giving reminders at a time");
+  eq(s.pending.length, 60, "with the prayers, still 60 in all");
+  eq(s.pending.filter(n => n.extra.prayer !== "giving").length, 48, "prayers fill the rest");
+  // prayers off: the reminders stay
+  await page.goto(URL0 + "#prayer"); await page.click("#openSettings"); await page.click('#setNotify [data-v="off"]');
+  await settle(page);
+  s = await ln(page);
+  eq(s.pending.length, 12, "only the Giving reminders");
+  await page.goto(URL0 + "#giving/reminders");
+  for (const k of ["zakat", "fitr", "friday", "lastTen"]) await page.click(`#r_${k} [data-v="off"]`);
+  await settle(page);
+  eq((await ln(page)).pending.length, 0, "all off: nothing scheduled");
+  eq(errors, [], "page errors");
+  await ctx.close();
+});
+
 await test("browser: no notification settings and no seed request", async () => {
   const seen = [];
   const { ctx, page } = await open({ ...atMakkah });

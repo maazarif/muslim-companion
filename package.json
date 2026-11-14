@@ -1,12 +1,12 @@
 {
   "name": "muslim-companion",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
-  "description": "Prayer times, qibla, athkar, duas and hadith. Web app, plus Android and iOS apps with prayer notifications.",
+  "description": "Prayer times, qibla, athkar, duas, hadith and giving (zakat, sadaqah, charity). Web app, plus Android and iOS apps with notifications.",
   "type": "module",
   "scripts": {
     "start": "python3 -m http.server 8080",
-    "test": "node tests/times.test.mjs && node tests/content.test.mjs && node tests/app.test.mjs && node tests/native.test.mjs",
+    "test": "node tests/times.test.mjs && node tests/content.test.mjs && node tests/giving.test.mjs && node tests/app.test.mjs && node tests/native.test.mjs",
     "build:web": "node tools/build-www.mjs",
     "android": "node tools/native.mjs android",
     "ios": "node tools/native.mjs ios"

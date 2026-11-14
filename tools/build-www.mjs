@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
-const FILES = ["index.html", "styles.css", "app.js", "util.js", "content.js", "native.js", "sw.js", "manifest.webmanifest", "icons", "fonts", "vendor", "data"];
+const FILES = ["index.html", "styles.css", "app.js", "util.js", "content.js", "native.js", "giving.js", "giving-calc.js", "sw.js", "manifest.webmanifest", "icons", "fonts", "vendor", "data"];
 const out = path.join(root, "www");
 fs.rmSync(out, { recursive: true, force: true });
 for (const f of FILES) fs.cpSync(path.join(root, f), path.join(out, f), { recursive: true });

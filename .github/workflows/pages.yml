@@ -22,6 +22,12 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npx playwright install --with-deps chromium
       - run: npm test
+      - name: Check the live gold and silver price feed (warning only)
+        continue-on-error: true
+        run: |
+          curl -fsS https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/xau.min.json -o xau.json
+          node -e 'const d=require("./xau.json"); const age=(Date.now()-new Date(d.date))/864e5; console.log("feed", d.date, "gold $"+d.xau.usd.toFixed(2)+"/oz", "silver $"+(d.xau.usd/d.xau.xag).toFixed(2)+"/oz"); if(!(d.xau.usd>0&&d.xau.xag>0)) throw new Error("no gold or silver price"); if(age>4) throw new Error("feed is "+Math.round(age)+" days old")'
+
   publish:
     needs: test
     runs-on: ubuntu-latest
