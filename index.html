@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Muslim Companion</title>
+<meta name="description" content="Prayer times, qibla, athkar, duas and hadith. Works offline.">
+<meta name="theme-color" content="#1f5a4b" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c1311" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Companion">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preload" href="fonts/figtree.woff" as="font" type="font/woff" crossorigin>
+<link rel="modulepreload" href="vendor/adhan-4.4.6.min.js">
+<style>
+  :root{color-scheme:light}
+  html,body{margin:0}
+  [hidden]{display:none!important}
+</style>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <div class="brand"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect x="7" y="7" width="18" height="18" rx="1.5"/><rect x="7" y="7" width="18" height="18" rx="1.5" transform="rotate(45 16 16)"/><circle cx="16" cy="16" r="5.2"/><circle cx="16" cy="16" r="2.2"/></svg><span class="ar">رفيق</span> <small>Companion</small></div>
+    <button class="icon-btn" id="installBtn" aria-label="Install the app" hidden>
+      <svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg><span class="txt">Install</span>
+    </button>
+    <a class="icon-btn" id="quranLink" href="https://maazarif.github.io/quran-app/" aria-label="Open the Mushaf">
+      <svg viewBox="0 0 24 24"><path d="M12 6c-2-1.6-5-2-8-1.5v14c3-.5 6-.1 8 1.5 2-1.6 5-2 8-1.5v-14c-3-.5-6-.1-8 1.5zM12 6v14"/></svg><span class="txt">Quran</span>
+    </a>
+    <button class="icon-btn" id="openSettings" aria-label="Settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+  </header>
+
+  <main id="view" aria-live="polite"></main>
+</div>
+
+<nav class="tabs" aria-label="Sections">
+  <a href="#prayer" data-tab="prayer"><svg viewBox="0 0 24 24"><path d="M12 3c-3 2.5-5 5-5 8h10c0-3-2-5.5-5-8zM5 11h14v10H5zM10 21v-4a2 2 0 0 1 4 0v4"/></svg><span>Prayer</span></a>
+  <a href="#athkar" data-tab="athkar"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="17" cy="7.5" r="1.6"/><circle cx="19" cy="12.5" r="1.6"/><circle cx="17" cy="17.5" r="1.6"/><circle cx="7" cy="7.5" r="1.6"/><circle cx="5" cy="12.5" r="1.6"/><circle cx="7" cy="17.5" r="1.6"/><path d="M12 19v3"/></svg><span>Athkar</span></a>
+  <a href="#duas" data-tab="duas"><svg viewBox="0 0 24 24"><path d="M8 21v-6l-3-4V6a1.5 1.5 0 0 1 3 0v4M16 21v-6l3-4V6a1.5 1.5 0 0 0-3 0v4M8 10l2 3M16 10l-2 3"/></svg><span>Duas</span></a>
+  <a href="#hadith" data-tab="hadith"><svg viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11M9 8h6"/></svg><span>Hadith</span></a>
+  <a href="#giving" data-tab="giving"><svg viewBox="0 0 24 24"><path d="M3 14h3l3.5 2.5H14a1.5 1.5 0 0 0 0-3h-3M6 20h8.5l6-4.5a1.6 1.6 0 0 0-2-2.5L14 16M3 13v8"/><path d="M15.5 3.2c-1-1-2.6-.9-3.5.2-.9-1.1-2.5-1.2-3.5-.2-1 1-1 2.6 0 3.6L12 10l3.5-3.2c1-1 1-2.6 0-3.6z"/></svg><span>Giving</span></a>
+</nav>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" hidden></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
