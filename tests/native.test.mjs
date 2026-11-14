@@ -248,7 +248,8 @@ await test("Giving reminders: zakat date, zakat al-fitr, Friday and the last ten
   ok(ids.includes(1002702264) && ids.includes(1002703054), "Fridays 26 Feb and 5 Mar");
   const night = giving.find(n => n.id === 1002702275);
   ok(night && night.body.includes("night 21"), "the first of the last ten nights: 20 Ramadan, 27 Feb, after Maghrib");
-  ok(night && new Date(night.schedule.at).getHours() >= 17, "after Maghrib");
+  const hour = night && Number(new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone: "America/Los_Angeles" }).format(new Date(night.schedule.at)));
+  ok(hour >= 17 && hour <= 19, `after Maghrib in Seattle (${hour}:xx)`);
   eq(giving.length, 12, "at most 12 Giving reminders at a time");
   eq(s.pending.length, 60, "with the prayers, still 60 in all");
   eq(s.pending.filter(n => n.extra.prayer !== "giving").length, 48, "prayers fill the rest");
