@@ -235,7 +235,8 @@ details .ref{border:0;padding:0}
 .list-row small{color:var(--muted);font-size:.78rem}
 .list-row em{font-style:normal;color:var(--muted);font-size:.8rem;font-variant-numeric:tabular-nums}
 .list-row .ar{font-size:1.1rem;color:var(--frame);flex:none}
-.names{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.names{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;direction:rtl} /* Arabic order: 1 at the top right */
+.name small{direction:ltr}
 .name{padding:14px 12px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px}
 .name .num{font-size:.7rem;color:var(--gilt);font-weight:700}
 .name .ar{font-size:1.6rem;color:var(--frame);line-height:1.6}

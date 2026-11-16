@@ -237,6 +237,9 @@ await test("duas: categories, search, a chapter with sources, and the 99 Names",
   await page.goto(URL0 + "#duas/names");
   await page.waitForSelector(".name");
   eq(await page.$$eval(".name", n => n.length), 99, "99 Names");
+  const [n1, n2, n3] = await page.$$eval(".name", n => n.slice(0, 3).map(e => { const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, t: e.querySelector(".num").textContent }; }));
+  ok(n1.t === "1" && n1.x > n2.x && n1.y === n2.y, "right to left: name 1 at the top right, 2 to its left");
+  ok(Math.abs(n3.x - n1.x) < 1 && n3.y > n1.y, "3 starts the next row on the right");
   eq(errors, [], "page errors");
   await ctx.close();
 });
