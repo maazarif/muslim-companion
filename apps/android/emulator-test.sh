@@ -14,7 +14,7 @@ adb install -r "$OUT/mushaf-preview-debug.apk" || fail=1
 shot() { # name, dark yes/no
   adb shell cmd uimode night "$2" >/dev/null
   adb shell am force-stop $PKG
-  adb shell am start -n $PKG/.MainActivity --ed seed_lat 51.5074 --ed seed_lng -0.1278 --es seed_label London >/dev/null
+  adb shell am start -n $PKG/io.github.maazarif.mushaf.MainActivity --ed seed_lat 51.5074 --ed seed_lng -0.1278 --es seed_label London >/dev/null
   sleep 6
   adb exec-out screencap -p > "$OUT/$1.png"
 }
