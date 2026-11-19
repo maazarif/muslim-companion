@@ -104,7 +104,7 @@ fun PrayerScreen() {
         val provider = listOf(LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER).firstOrNull { lm.isProviderEnabled(it) }
         if (provider == null) { error = "Location is turned off. Turn it on in your phone's settings."; return }
         try {
-            LocationManagerCompat.getCurrentLocation(lm, provider, null, ContextCompat.getMainExecutor(ctx)) { loc ->
+            LocationManagerCompat.getCurrentLocation(lm, provider, null as androidx.core.os.CancellationSignal?, ContextCompat.getMainExecutor(ctx)) { loc: android.location.Location? ->
                 if (loc == null) error = "Couldn't get your location just now. Try again."
                 else { val p = Place(round4(loc.latitude), round4(loc.longitude), "My location"); Places.save(ctx, p); place = p; error = null }
             }
