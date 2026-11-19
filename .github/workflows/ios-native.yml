@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-15-intel # the Apple-silicon pool was repeatedly out of capacity (Nov 2026)
     env:
       VERSION_CODE: ${{ github.run_number }}
     defaults:
