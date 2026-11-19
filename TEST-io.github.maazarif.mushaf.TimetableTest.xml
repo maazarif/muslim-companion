@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="io.github.maazarif.mushaf.TimetableTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-19T15:38:10.897Z" hostname="runnervmccnms" time="0.189">
+  <properties/>
+  <testcase name="highLatitudeRuleCoversBothHemispheres" classname="io.github.maazarif.mushaf.TimetableTest" time="0.003"/>
+  <testcase name="everyPublishedTimeMatches" classname="io.github.maazarif.mushaf.TimetableTest" time="0.182"/>
+  <testcase name="methodSuggestionMatchesTheWebApp" classname="io.github.maazarif.mushaf.TimetableTest" time="0.0"/>
+  <testcase name="qiblaMatchesAdhanReferenceBearings" classname="io.github.maazarif.mushaf.TimetableTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

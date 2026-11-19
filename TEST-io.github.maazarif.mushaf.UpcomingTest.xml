@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="io.github.maazarif.mushaf.UpcomingTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-19T15:38:11.088Z" hostname="runnervmccnms" time="0.008">
+  <properties/>
+  <testcase name="betweenSunriseAndDhuhrNoPrayerIsCurrent" classname="io.github.maazarif.mushaf.UpcomingTest" time="0.002"/>
+  <testcase name="afterIshaNextIsTomorrowsFajr" classname="io.github.maazarif.mushaf.UpcomingTest" time="0.0"/>
+  <testcase name="countdownText" classname="io.github.maazarif.mushaf.UpcomingTest" time="0.004"/>
+  <testcase name="londonTodayMatchesTheWebApp" classname="io.github.maazarif.mushaf.UpcomingTest" time="0.001"/>
+  <testcase name="beforeFajrIsStillIsha" classname="io.github.maazarif.mushaf.UpcomingTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
