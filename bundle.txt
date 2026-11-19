@@ -1,0 +1,14 @@
+__preview.dylib
+App
+App.debug.dylib
+AppIcon60x60@2x.png
+AppIcon76x76@2x~ipad.png
+Assets.car
+Base.lproj
+capacitor.config.json
+chime.wav
+config.xml
+Frameworks
+Info.plist
+PkgInfo
+public
