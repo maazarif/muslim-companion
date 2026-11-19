@@ -1,0 +1,52 @@
+# The native iPhone app. Generate the Xcode project with `xcodegen` (CI does this; see .github/workflows/ios-native.yml).
+name: Mushaf
+options:
+  bundleIdPrefix: io.github.maazarif
+  deploymentTarget: { iOS: "16.0" }
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1"
+    CURRENT_PROJECT_VERSION: ${VERSION_CODE}
+packages:
+  Adhan:
+    url: https://github.com/batoulapps/adhan-swift
+    exactVersion: 1.5.0
+targets:
+  Mushaf:
+    type: application
+    platform: iOS
+    sources: [Mushaf]
+    dependencies:
+      - package: Adhan
+    info:
+      path: Mushaf/Info.plist
+      properties:
+        CFBundleDisplayName: Mushaf (preview)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIAppFonts: [amiri_regular.ttf, amiri_bold.ttf, figtree_regular.ttf, figtree_semibold.ttf, figtree_bold.ttf]
+        NSLocationWhenInUseUsageDescription: Prayer times and the qibla are worked out for where you are. Your location stays on this phone.
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.maazarif.mushaf.preview
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1,2"
+  MushafTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [MushafTests]
+    dependencies:
+      - target: Mushaf
+      - package: Adhan
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  Mushaf:
+    build: { targets: { Mushaf: all, MushafTests: [test] } }
+    test: { targets: [MushafTests] }

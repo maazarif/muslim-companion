@@ -89,12 +89,11 @@ object PrayerEngine {
     fun methodFor(place: Place, s: PrayerSettings): Method = s.method ?: Method.suggestedFor(place.lat, place.lng)
 
     fun parameters(place: Place, s: PrayerSettings): CalculationParameters {
-        val coords = Coordinates(place.lat, place.lng)
         val adj = s.adjustments
         return methodFor(place, s).parameters().copy(
             madhab = if (s.asr == AsrSchool.Hanafi) Madhab.HANAFI else Madhab.SHAFI,
             highLatitudeRule = when (s.highLatitude) {
-                HighLatitude.Auto -> HighLatitudeRule.recommendedFor(coords)
+                HighLatitude.Auto -> recommendedRule(place.lat)
                 HighLatitude.MiddleOfTheNight -> HighLatitudeRule.MIDDLE_OF_THE_NIGHT
                 HighLatitude.SeventhOfTheNight -> HighLatitudeRule.SEVENTH_OF_THE_NIGHT
                 HighLatitude.TwilightAngle -> HighLatitudeRule.TWILIGHT_ANGLE
@@ -105,6 +104,10 @@ object PrayerEngine {
             )
         )
     }
+
+    /** As adhan-js (the web app): seventh of the night beyond 48° north or south. adhan2 only checks the north. */
+    fun recommendedRule(lat: Double): HighLatitudeRule =
+        if (kotlin.math.abs(lat) > 48) HighLatitudeRule.SEVENTH_OF_THE_NIGHT else HighLatitudeRule.MIDDLE_OF_THE_NIGHT
 
     fun timesFor(date: LocalDate, place: Place, s: PrayerSettings): DayTimes = timesFor(date, place, parameters(place, s))
 

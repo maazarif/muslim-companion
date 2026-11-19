@@ -35,6 +35,12 @@ class UpcomingTest {
         assertEquals(Prayer.Fajr, u.next); assertTrue(u.tomorrow); assertEquals(Prayer.Isha, u.current)
         assertEquals(PrayerEngine.timesFor(day.plusDays(1), london, s)[Prayer.Fajr], u.at)
     }
+    /** Today's London times, the same as the web app's engine gives (checked against adhan-js 4.4.6). */
+    @Test fun londonTodayMatchesTheWebApp() {
+        val f = java.time.format.DateTimeFormatter.ofPattern("h:mm a", java.util.Locale.US)
+        assertEquals(listOf("5:46 AM", "7:25 AM", "11:51 AM", "1:44 PM", "4:09 PM", "5:37 PM"),
+            Prayer.entries.map { f.format(java.time.Instant.ofEpochMilli(t[it]).atZone(zone)) })
+    }
     @Test fun countdownText() {
         assertEquals("in less than a minute", countdown(0))
         assertEquals("in 5 min", countdown(4 * 60_000 + 1))

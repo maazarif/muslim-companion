@@ -84,6 +84,13 @@ class TimetableTest {
     }
 
     @Test
+    fun highLatitudeRuleCoversBothHemispheres() {
+        assertEquals(HighLatitudeRule.SEVENTH_OF_THE_NIGHT, PrayerEngine.recommendedRule(51.5))
+        assertEquals(HighLatitudeRule.SEVENTH_OF_THE_NIGHT, PrayerEngine.recommendedRule(-51.7)) // Falklands
+        assertEquals(HighLatitudeRule.MIDDLE_OF_THE_NIGHT, PrayerEngine.recommendedRule(40.7))
+    }
+
+    @Test
     fun methodSuggestionMatchesTheWebApp() {
         assertEquals(Method.UmmAlQura, Method.suggestedFor(21.4225, 39.8262))
         assertEquals(Method.MoonsightingCommittee, Method.suggestedFor(51.5074, -0.1278))
