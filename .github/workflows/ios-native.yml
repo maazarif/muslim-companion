@@ -36,6 +36,7 @@ jobs:
       - name: Unit tests (prayer times, qibla, Hijri, fonts)
         run: |
           set -o pipefail
+          mkdir -p build
           xcodebuild test -project Mushaf.xcodeproj -scheme Mushaf -destination "platform=iOS Simulator,id=$UDID" \
             -derivedDataPath build/test -resultBundlePath build/tests.xcresult CODE_SIGNING_ALLOWED=NO \
             | tee build/test.log | grep -E "Test Case .*(passed|failed)|error:|XCTAssert|Executed" ; exit ${PIPESTATUS[0]}
@@ -59,7 +60,7 @@ jobs:
           xcrun simctl spawn "$UDID" log show --last 2m --style compact --predicate 'process == "Mushaf" AND messageType >= 16' > ../../out/app-log.txt 2>&1 || true
       - name: Collect test results
         if: always()
-        run: cp build/test.log ../../out/ 2>/dev/null || true
+        run: mkdir -p ../../out && cp build/test.log ../../out/ 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: mushaf-ios-native, path: out }
