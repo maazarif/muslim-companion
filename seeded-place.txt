@@ -1,0 +1,3 @@
+  "place.label" => "London"
+  "place.lat" => 51.5074
+  "place.lng" => -0.1278

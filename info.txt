@@ -1,0 +1,5 @@
+  "CFBundleDisplayName" => "Mushaf (preview)"
+  "CFBundleIdentifier" => "io.github.maazarif.mushaf.preview"
+  "CFBundleVersion" => "7"
+  "NSLocationWhenInUseUsageDescription" => "Prayer times and the qibla are worked out for where you are. Your location stays on this phone."
+  "UIAppFonts" => [
