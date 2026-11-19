@@ -54,8 +54,12 @@ jobs:
           xcrun simctl boot "$UDID" 2>/dev/null || true; xcrun simctl bootstatus "$UDID" -b
           xcrun simctl install "$UDID" "$APP"
           xcrun simctl ui "$UDID" appearance light
-          SIMCTL_CHILD_TZ=Europe/London xcrun simctl launch "$UDID" io.github.maazarif.mushaf.preview -seedLat 51.5074 -seedLng -0.1278 -seedLabel London
-          sleep 8; xcrun simctl io "$UDID" screenshot ../../out/iphone-native-prayer.png
+          SIMCTL_CHILD_TZ=Europe/London xcrun simctl launch "$UDID" io.github.maazarif.mushaf.preview -seedPlace "51.5074,-0.1278,London"
+          sleep 8
+          # the screenshot must be of London's real coordinates
+          LAT=$(xcrun simctl spawn "$UDID" defaults read io.github.maazarif.mushaf.preview place.lat); LNG=$(xcrun simctl spawn "$UDID" defaults read io.github.maazarif.mushaf.preview place.lng)
+          echo "Seeded place: $LAT, $LNG"; test "$LAT" = "51.5074" && test "$LNG" = "-0.1278"
+ xcrun simctl io "$UDID" screenshot ../../out/iphone-native-prayer.png
           xcrun simctl ui "$UDID" appearance dark; sleep 4; xcrun simctl io "$UDID" screenshot ../../out/iphone-native-prayer-dark.png
           xcrun simctl spawn "$UDID" log show --last 2m --style compact --predicate 'process == "Mushaf" AND messageType >= 16' > ../../out/app-log.txt 2>&1 || true
       - name: Collect test results
